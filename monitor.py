@@ -95,10 +95,14 @@ def load_rows():
 
 
 def save_rows(rows):
-    with open(CSV_FILE, "w", newline="") as f:
+    """Write all rows safely: write a temp file first, then swap it in.
+    This way Excel (or anything else reading the file) never sees a half-written file."""
+    temp_file = CSV_FILE + ".tmp"
+    with open(temp_file, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
+    os.replace(temp_file, CSV_FILE)
 
 
 # ----------------------------- Main logic ---------------------------------
@@ -178,16 +182,18 @@ def main():
     print("Press Ctrl+C to stop.\n")
 
     rows = load_rows()
-    save_rows(rows)  # creates results.csv with headers if it doesn't exist yet
+    needs_save = True  # creates results.csv with headers if it doesn't exist yet
     last_status = ""
 
     while True:
         try:
-            changed = settle_pending(rows)
+            if settle_pending(rows):
+                needs_save = True
 
             market = get_current_market()
             if market:
-                changed = check_market(market, rows) or changed
+                if check_market(market, rows):
+                    needs_save = True
 
                 # Print a short status line whenever the minute changes.
                 seconds_left = int((parse_time(market["close_time"]) - datetime.now(timezone.utc)).total_seconds())
@@ -198,8 +204,6 @@ def main():
                 if status[:5] != last_status[:5]:
                     print(status)
                     last_status = status
-            if changed:
-                save_rows(rows)
 
         except requests.RequestException as error:
             print(f"Network error (will retry): {error}")
@@ -207,6 +211,14 @@ def main():
             raise
         except Exception as error:  # keep running no matter what
             print(f"Unexpected error (will retry): {error}")
+
+        # If saving fails (e.g. file busy), needs_save stays True and we retry next loop.
+        if needs_save:
+            try:
+                save_rows(rows)
+                needs_save = False
+            except OSError as error:
+                print(f"Could not save results.csv yet (will retry): {error}")
 
         time.sleep(POLL_SECONDS)
 

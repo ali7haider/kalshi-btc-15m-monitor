@@ -65,8 +65,30 @@ You'll see a status line every minute, plus a line whenever something is recorde
 It's safe to stop and restart. Rows still marked `PENDING` are updated to WIN or LOSS the next
 time the program runs.
 
-**Tip:** Close `results.csv` in Excel while the monitor is running, or open a copy. Excel can lock
-the file and stop new rows from being saved.
+## Viewing results live in Excel (recommended)
+
+`results.csv` is the monitor's own file. **Don't open it directly and save it in Excel while the
+monitor is running.** Excel shows a snapshot that doesn't update, and saving from Excel can overwrite
+rows the monitor just added.
+
+Instead, make a separate Excel workbook that *reads* the CSV and refreshes:
+
+1. Open Excel and create a **new blank workbook**.
+2. Go to **Data → Get Data → From Text/CSV** (on older Excel: **Data → From Text**).
+3. Select `results.csv` in the project folder and click **Load**.
+4. Save this workbook, for example as `Kalshi Dashboard.xlsx`. You can save it in the same folder.
+5. To see the latest rows and WIN/LOSS updates, click **Data → Refresh All**.
+6. Optional auto-refresh: right-click inside the table → **Table → External Data Properties**
+   (or **Query Properties**) → tick **Refresh every 1 minute**. The exact menu name depends on your
+   Excel version.
+
+In this workbook you can sort, filter, colour WIN/LOSS or add charts. The monitor's data stays safe.
+
+**Quick alternative:** open `results.csv` only to *look* (don't save it), and close and reopen it to
+see new rows. Google Sheets and Numbers work the same way. They show a copy, not a live view.
+
+The monitor writes the file safely: it writes a temporary file first and then swaps it in. If the
+file is busy, it keeps retrying until the save works, so no rows are lost.
 
 ## Settings
 
