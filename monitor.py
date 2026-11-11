@@ -219,9 +219,9 @@ def main():
                 seconds_left = int((parse_time(market["close_time"]) - datetime.now(timezone.utc)).total_seconds())
                 up = to_percent(market.get("yes_ask_dollars"))
                 down = to_percent(market.get("no_ask_dollars"))
+                time_left = f"{seconds_left // 60}m left" if seconds_left >= 0 else "closed - waiting for result"
                 status = (f"{datetime.now(EASTERN):%H:%M} ET | {market['ticker']} | "
-                          f"UP {format_percent(up)} DOWN {format_percent(down)} | "
-                          f"{seconds_left // 60}m left")
+                          f"UP {format_percent(up)} DOWN {format_percent(down)} | {time_left}")
                 if status[:5] != last_status[:5]:
                     print(status)
                     last_status = status
