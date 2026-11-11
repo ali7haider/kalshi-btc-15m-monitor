@@ -32,6 +32,7 @@ COLUMNS = [
     "Market",
     "Side",
     "Percentage",
+    "Peak %",
     "Time Detected (ET)",
     "Seconds Before Close",
     "Target Price",
@@ -82,8 +83,18 @@ def to_percent(price_dollars):
 
 
 def format_percent(value):
-    """91.0 -> '91%', 91.5 -> '91.5%'."""
+    """91.0 -> '91%', 91.5 -> '91.5%', None -> '-' (no price available)."""
+    if value is None:
+        return "-"
     return f"{value:g}%"
+
+
+def parse_percent(text):
+    """'91.5%' -> 91.5. Returns 0 if empty or not a number."""
+    try:
+        return float(str(text).rstrip("%"))
+    except ValueError:
+        return 0
 
 
 # ----------------------------- CSV storage --------------------------------
@@ -99,7 +110,7 @@ def save_rows(rows):
     This way Excel (or anything else reading the file) never sees a half-written file."""
     temp_file = CSV_FILE + ".tmp"
     with open(temp_file, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=COLUMNS)
+        writer = csv.DictWriter(f, fieldnames=COLUMNS, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
     os.replace(temp_file, CSV_FILE)
@@ -124,10 +135,18 @@ def check_market(market, rows):
 
     changed = False
     for side, percent in sides.items():
-        if percent is None or percent < THRESHOLD:
+        if percent is None:
             continue
-        already_recorded = any(r["Market"] == ticker and r["Side"] == side for r in rows)
-        if already_recorded:
+
+        # Already recorded? Then only update the peak if this price is higher.
+        existing = next((r for r in rows if r["Market"] == ticker and r["Side"] == side), None)
+        if existing:
+            if percent > parse_percent(existing.get("Peak %")):
+                existing["Peak %"] = format_percent(percent)
+                changed = True
+            continue
+
+        if percent < THRESHOLD:
             continue
 
         now_et = now.astimezone(EASTERN)
@@ -137,6 +156,7 @@ def check_market(market, rows):
             "Market": ticker,
             "Side": side,
             "Percentage": format_percent(percent),
+            "Peak %": format_percent(percent),
             "Time Detected (ET)": now_et.strftime("%H:%M:%S"),
             "Seconds Before Close": seconds_left,
             "Target Price": target,
@@ -200,7 +220,8 @@ def main():
                 up = to_percent(market.get("yes_ask_dollars"))
                 down = to_percent(market.get("no_ask_dollars"))
                 status = (f"{datetime.now(EASTERN):%H:%M} ET | {market['ticker']} | "
-                          f"UP {up}% DOWN {down}% | {seconds_left // 60}m left")
+                          f"UP {format_percent(up)} DOWN {format_percent(down)} | "
+                          f"{seconds_left // 60}m left")
                 if status[:5] != last_status[:5]:
                     print(status)
                     last_status = status

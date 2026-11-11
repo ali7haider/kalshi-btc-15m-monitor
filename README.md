@@ -15,6 +15,7 @@ No Kalshi account or API key is needed. It only reads public market data.
 | Market | KXBTC15M-26NOV110200-00 | Kalshi market ticker |
 | Side | UP / DOWN | Which side reached the threshold |
 | Percentage | 91% | Price (chance) when first detected |
+| Peak % | 99.6% | Highest price that side reached before the market closed |
 | Time Detected (ET) | 01:56:42 | Exact time it was detected |
 | Seconds Before Close | 198 | How long before the market closed |
 | Target Price | $73,572.67 | BTC price the market is measured against |
@@ -57,7 +58,7 @@ Keep the Terminal window open. To stop it, press **Ctrl + C**.
 You'll see a status line every minute, plus a line whenever something is recorded or settled:
 
 ```
-01:56 ET | KXBTC15M-26NOV110200-00 | UP 91.0% DOWN None% | 3m left
+01:56 ET | KXBTC15M-26NOV110200-00 | UP 91% DOWN 10% | 3m left
   >> RECORDED UP at 91% on KXBTC15M-26NOV110200-00 (198s before close)
   >> SETTLED KXBTC15M-26NOV110200-00: UP -> WIN
 ```
@@ -106,3 +107,6 @@ Change these at the top of `monitor.py` if needed:
 - The percentage is the **ask price** (the cost to buy that side), which matches what the Kalshi
   app shows as the price.
 - Each side is recorded **once per market**, at the first moment it reaches the threshold.
+  After that, `Peak %` keeps updating until the market closes if the price goes higher.
+- `-` in the status line means there is no price for that side at the moment. This usually
+  happens just before close, when one side is almost certain and nobody is selling it.
